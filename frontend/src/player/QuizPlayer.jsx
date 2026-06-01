@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { getAttempt, submitAttempt } from "../api/attempts.js";
 import QuestionInput from "./QuestionInput.jsx";
 
 export default function QuizPlayer() {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [attempt, setAttempt] = useState(location.state?.attempt || null);
   const [loading, setLoading] = useState(!location.state?.attempt);
@@ -22,6 +23,14 @@ export default function QuizPlayer() {
       .catch(() => setError("Could not load this quiz."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // If the attempt was already submitted (e.g. opened from history), send the
+  // user to its results rather than rendering review-shaped data as inputs.
+  useEffect(() => {
+    if (attempt && !result && attempt.submitted_at) {
+      navigate(`/results/${attempt.id}`, { replace: true });
+    }
+  }, [attempt, result, navigate]);
 
   const questions = attempt?.questions || [];
 
@@ -54,7 +63,13 @@ export default function QuizPlayer() {
 
   async function onSubmit(e) {
     e.preventDefault();
-    if (!window.confirm("Submit this quiz? You can't change answers afterwards.")) return;
+    const unanswered = questions.length - answeredCount;
+    const confirmMsg =
+      unanswered > 0
+        ? `You have ${unanswered} unanswered question${unanswered > 1 ? "s" : ""}. ` +
+          "Submit anyway? You can't change answers afterwards."
+        : "Submit this quiz? You can't change answers afterwards.";
+    if (!window.confirm(confirmMsg)) return;
     setBusy(true);
     setError(null);
     try {
@@ -112,6 +127,11 @@ export default function QuizPlayer() {
         </p>
       </div>
 
+      {attempt?.notice && (
+        <p role="status" className="hint notice">
+          {attempt.notice}
+        </p>
+      )}
       {error && <p role="alert" className="status-error">{error}</p>}
 
       <form onSubmit={onSubmit}>

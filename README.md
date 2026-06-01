@@ -11,10 +11,12 @@ attempts, automatic + manual grading, results, and per-user attempt history.
 See [`FEATURE_REQUIREMENTS.md`](FEATURE_REQUIREMENTS.md) and
 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for scope and design.
 
-> **Build status:** Milestones 1–6 complete (scaffold + Docker; JWT auth with
-> roles; question bank + admin editor; seed; quiz player with randomized
+> **Build status:** Complete (Milestones 1–10) — scaffold + Docker; JWT auth
+> with roles; question bank + admin editor; seed; quiz player with randomized
 > attempts, snapshotting, auto-grading, and image uploads; results + review
-> screen and attempt history). The admin image-review queue lands next.
+> screen and attempt history; admin image-review queue; accessibility +
+> responsive pass; test suite (42 backend + 16 frontend) + docs; and a final
+> polish pass (empty/error/edge-case states + production-hardening checklist).
 
 ---
 
@@ -134,6 +136,20 @@ and correctness (✅/❌, or ⏳ for image answers still awaiting review). The S
 renders this at `/results/:id`; `/history` lists all of the user's attempts with
 date, score, and status, linking each to its review (or resume, if unfinished).
 
+### Admin image-review API
+
+Image answers are graded manually. Submitting an attempt that contains an image
+leaves it `awaiting_review` with a provisional score until an admin rules on it.
+
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| GET | `/api/review/queue/` | Pending image submissions across all users (image, prompt, requirement, who/which attempt) | admin |
+| POST | `/api/review/answers/{id}/` | Body `{ "is_correct": true\|false }` — records the verdict + reviewer, then recomputes the attempt's score and flips it to `graded` once nothing is pending | admin |
+
+The SPA exposes this at `/admin/review` (image preview + Correct/Incorrect
+buttons). Score finalization is centralized in `Attempt.recalculate()`, so a
+verdict immediately updates the score the player sees on their results page.
+
 Stop and remove everything (including the DB volume):
 
 ```bash
@@ -171,14 +187,52 @@ The frontend reads `VITE_API_BASE` (default `http://localhost:8000`).
 ## Testing
 
 ```bash
-# Backend
-cd backend && python manage.py test        # (test suite grows with each milestone)
+# Backend (Django test runner) — 42 tests
+cd backend && python manage.py test
+# Inside Docker:
+docker compose exec backend python manage.py test
 
-# Frontend
+# Frontend (Vitest + Testing Library) — 16 tests
 cd frontend && npm test
 ```
 
+**Backend coverage** (`accounts`, `questions`, `quiz`):
+- Auth: registration (incl. weak-password + privilege-escalation guards), login
+  returning role, `me`, superuser→admin role.
+- Question validation: single = exactly one correct, multiple ≥ 1, ≥ 2 choices,
+  required numerical/text/image fields; admin-only writes; read filtering.
+- Seed command: all five types present, single-choice integrity, idempotency.
+- Grading engine: text (normalized), numerical (exact), single, multiple
+  (all-or-nothing) — tested as pure functions.
+- Attempts: N served, no repeats, independent randomization, pool < N, answers
+  hidden in-progress vs. revealed after submit, owner isolation, re-submit guard.
+- Image review: queue lists only pending, admin-only, verdict finalizes score
+  and flips `awaiting_review` → `graded`.
+
+**Frontend coverage**: login form a11y, question-editor validation + valid
+submit, results review (score + ✅/❌ markers + revealed answers), history list +
+empty state, and the quiz player (questions, progress, prompt-tied radio group).
+
 ---
+
+## Accessibility & responsive design
+
+The SPA is built to be keyboard-navigable and screen-reader friendly:
+
+- **Skip link** — a "Skip to main content" link is the first focusable element.
+- **Focus management** — on every route change focus moves to the main region,
+  and the new page name is announced via an `aria-live` region; `document.title`
+  updates per route.
+- **Forms** — every input has an associated `<label>`; choice questions use
+  native radio/checkbox groups inside `<fieldset>`/`<legend>`, and each group is
+  tied to its question prompt with `aria-labelledby`. Errors use `role="alert"`
+  and inputs flag `aria-invalid`.
+- **Navigation** — current page is marked with `aria-current="page"` (and shown
+  visually). Status/progress use `role="status"` / `aria-live`.
+- **Visible focus** — a high-contrast focus ring on every focusable element.
+- **Contrast** — body and muted text meet WCAG AA (≥ 4.5:1) on the dark theme.
+- **Responsive** — single-column layouts on small screens; data tables collapse
+  to stacked cards; the navbar and review queue reflow for mobile.
 
 ## Configuration
 
@@ -188,7 +242,56 @@ JWT lifetimes, and `CORS_ALLOWED_ORIGINS`.
 
 ---
 
+## Production hardening checklist
+
+The defaults are tuned for a quick local/demo run. Before deploying:
+
+- [ ] **`SECRET_KEY`** — set a long random value (the dev default is insecure and
+      triggers a JWT key-length warning).
+- [ ] **`DEBUG=false`** — never run production with debug on.
+- [ ] **`ALLOWED_HOSTS`** — list your real domain(s); don't leave it permissive.
+- [ ] **`CORS_ALLOWED_ORIGINS`** — restrict to your front-end origin(s) only.
+- [ ] **Database** — strong `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD`; don't expose
+      port 3306 publicly; back up the `db_data` volume.
+- [ ] **JWT lifetimes** — tune `JWT_ACCESS_MINUTES` / `JWT_REFRESH_DAYS`.
+- [ ] **Static files** — run `python manage.py collectstatic`; serve via the web
+      server / CDN rather than Django.
+- [ ] **Media uploads** — the dev server serves `/media/` only when `DEBUG=true`.
+      In production serve uploads via the web server or object storage (e.g. S3)
+      and keep the media volume persistent/backed up.
+- [ ] **HTTPS** — terminate TLS at a reverse proxy; set `SECURE_*` cookie/SSL
+      settings and `CSRF_TRUSTED_ORIGINS`.
+- [ ] **gunicorn** — tune worker count; drop the `--reload` flag used in dev.
+- [ ] **Frontend** — build with `npm run build` and serve the static bundle
+      (the compose `frontend` service runs the Vite dev server, for development).
+
+---
+
 ## AI tools & techniques
 
-This project is being built with AI assistance (Claude Code). Notable techniques and
-disclosures will be documented here as the build progresses.
+This project was built with AI assistance (Claude Code) used as a pair-programmer:
+scaffolding, drafting code/tests, and running verification. Every milestone was
+checked the same way — unit tests **plus** a live end-to-end run against the real
+Docker + MySQL stack (curl flows for the API; build + Testing Library for the SPA)
+— so each step was demonstrably working before moving on.
+
+A few design techniques worth highlighting:
+
+- **Answer-snapshotting for attempt integrity.** Each served question is frozen
+  into an `AttemptQuestion` (prompt + choices + correct answers) when an attempt
+  starts, so later edits or deletions to the question bank never alter a past
+  attempt's content or score. Results/review always read the snapshot.
+- **Leak-proof serialization.** Player-facing serializers never include correct
+  answers; the attempt detail endpoint only switches to the answer-revealing
+  "review" serializer **after** submission (`submitted_at` gate), verified by
+  tests in both directions.
+- **One source of truth for scoring.** `Attempt.recalculate()` centralizes score
+  + status computation and is reused by both auto-grading on submit and the admin
+  image verdict, so a manual review instantly and consistently updates the score
+  the player sees — including the provisional → final (`awaiting_review` →
+  `graded`) transition.
+- **Pure grading engine.** Grading is a set of side-effect-free functions
+  (`quiz/grading.py`) unit-tested in isolation from the HTTP layer.
+- **SPA accessibility plumbing.** A small `RouteManager` restores the behaviors
+  full-page loads give for free — moving focus to main content on navigation,
+  announcing the page via `aria-live`, and setting `document.title` per route.

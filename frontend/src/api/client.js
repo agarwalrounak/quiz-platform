@@ -41,6 +41,8 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         refreshing = null;
         tokens.clear();
+        // Flag the reason so the login page can explain the redirect.
+        sessionStorage.setItem("quiz.sessionExpired", "1");
         // Force a clean redirect to login.
         if (window.location.pathname !== "/login") {
           window.location.assign("/login");

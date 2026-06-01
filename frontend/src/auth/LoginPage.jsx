@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState(null);
+
+  // If we were redirected here by an expired session, explain why (once).
+  useEffect(() => {
+    if (sessionStorage.getItem("quiz.sessionExpired")) {
+      sessionStorage.removeItem("quiz.sessionExpired");
+      setNotice("Your session expired. Please log in again.");
+    }
+  }, []);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -35,6 +44,11 @@ export default function LoginPage() {
     <main className="container narrow">
       <h1>Log in</h1>
       <form onSubmit={onSubmit} noValidate>
+        {notice && !error && (
+          <p role="status" className="hint notice">
+            {notice}
+          </p>
+        )}
         {error && (
           <p role="alert" className="status-error">
             {error}
