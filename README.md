@@ -16,7 +16,7 @@ See [`FEATURE_REQUIREMENTS.md`](FEATURE_REQUIREMENTS.md) and
 > attempts, snapshotting, auto-grading, and image uploads; results + review
 > screen and attempt history; admin image-review queue; accessibility +
 > responsive pass; test suite (42 backend + 16 frontend) + docs; and a final
-> polish pass (empty/error/edge-case states + production-hardening checklist).
+> polish pass (empty/error/edge-case states).
 
 ---
 
@@ -231,31 +231,6 @@ The SPA is built to be keyboard-navigable and screen-reader friendly:
 All configuration is environment-driven; see [`.env.example`](.env.example).
 Key variables: `QUIZ_LENGTH` (questions per attempt, default 10), MySQL credentials,
 JWT lifetimes, and `CORS_ALLOWED_ORIGINS`.
-
----
-
-## Production hardening checklist
-
-The defaults are tuned for a quick local/demo run. Before deploying:
-
-- [ ] **`SECRET_KEY`** — set a long random value (the dev default is insecure and
-      triggers a JWT key-length warning).
-- [ ] **`DEBUG=false`** — never run production with debug on.
-- [ ] **`ALLOWED_HOSTS`** — list your real domain(s); don't leave it permissive.
-- [ ] **`CORS_ALLOWED_ORIGINS`** — restrict to your front-end origin(s) only.
-- [ ] **Database** — strong `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD`; don't expose
-      port 3306 publicly; back up the `db_data` volume.
-- [ ] **JWT lifetimes** — tune `JWT_ACCESS_MINUTES` / `JWT_REFRESH_DAYS`.
-- [ ] **Static files** — run `python manage.py collectstatic`; serve via the web
-      server / CDN rather than Django.
-- [ ] **Media uploads** — the dev server serves `/media/` only when `DEBUG=true`.
-      In production serve uploads via the web server or object storage (e.g. S3)
-      and keep the media volume persistent/backed up.
-- [ ] **HTTPS** — terminate TLS at a reverse proxy; set `SECURE_*` cookie/SSL
-      settings and `CSRF_TRUSTED_ORIGINS`.
-- [ ] **gunicorn** — tune worker count; drop the `--reload` flag used in dev.
-- [ ] **Frontend** — build with `npm run build` and serve the static bundle
-      (the compose `frontend` service runs the Vite dev server, for development).
 
 ---
 
