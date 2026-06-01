@@ -33,13 +33,6 @@ Then open:
 
 - **Frontend:** http://localhost:5173 — should show "✅ Connected".
 - **Backend health:** http://localhost:8000/api/health/ — `{"status": "ok", ...}`.
-- **Django admin:** http://localhost:8000/admin/ (create an admin first, below).
-
-Create an admin user (superusers automatically get the `admin` role):
-
-```bash
-docker compose exec backend python manage.py createsuperuser
-```
 
 ### Seed demo data
 
@@ -105,7 +98,6 @@ Per-type validation is enforced server-side (and mirrored in the React editor):
 
 The admin question editor lives at `/admin/questions` (list + filters + delete)
 and `/admin/questions/new` · `/admin/questions/:id/edit` (type-aware form).
-Questions are also manageable via Django admin at `/admin/`.
 
 ### Quiz player API
 
