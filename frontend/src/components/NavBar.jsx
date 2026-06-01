@@ -1,6 +1,7 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
+// NavLink sets aria-current="page" on the active route automatically.
 export default function NavBar() {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const navigate = useNavigate();
@@ -19,12 +20,17 @@ export default function NavBar() {
         <ul className="nav-links">
           {isAuthenticated && (
             <li>
-              <Link to="/history">My attempts</Link>
+              <NavLink to="/history">My attempts</NavLink>
             </li>
           )}
           {isAdmin && (
             <li>
-              <Link to="/admin/questions">Question bank</Link>
+              <NavLink to="/admin/questions">Question bank</NavLink>
+            </li>
+          )}
+          {isAdmin && (
+            <li>
+              <NavLink to="/admin/review">Review queue</NavLink>
             </li>
           )}
           {isAuthenticated ? (
@@ -41,7 +47,7 @@ export default function NavBar() {
             </>
           ) : (
             <li>
-              <Link to="/login">Log in</Link>
+              <NavLink to="/login">Log in</NavLink>
             </li>
           )}
         </ul>

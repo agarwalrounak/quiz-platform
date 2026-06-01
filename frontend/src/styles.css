@@ -6,6 +6,8 @@
   --ok: #4ade80;
   --error: #f87171;
   --focus: #fbbf24;
+  /* Muted text that still meets WCAG AA (>=4.5:1) on both bg and panel. */
+  --muted: #b6c2d4;
 }
 
 * {
@@ -38,6 +40,30 @@ body {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* Skip link: hidden until focused, then pinned top-left. */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: #04243a;
+  border-radius: 0 0 6px 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* The main region is a focus target on route change; don't show its ring. */
+#main-content:focus {
+  outline: none;
 }
 
 .container.narrow {
@@ -124,7 +150,14 @@ a {
 }
 
 .nav-user {
-  opacity: 0.85;
+  color: var(--muted);
+}
+
+/* Current page (NavLink sets .active + aria-current="page"). */
+.nav-links a.active {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  font-weight: 600;
 }
 
 .badge {
@@ -188,7 +221,7 @@ a {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  opacity: 0.8;
+  color: var(--muted);
 }
 
 .row-actions {
@@ -264,7 +297,18 @@ a {
 .hint {
   margin: 0.3rem 0 0;
   font-size: 0.85rem;
-  opacity: 0.7;
+  color: var(--muted);
+}
+
+/* Informational banner (pool notice, session-expired, etc.). */
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.95rem;
 }
 
 /* --- Cards & quiz player --- */
@@ -391,7 +435,7 @@ a {
 
 .review-dl dt {
   font-weight: 600;
-  opacity: 0.8;
+  color: var(--muted);
 }
 
 .review-dl dd {
@@ -399,7 +443,48 @@ a {
 }
 
 .muted {
-  opacity: 0.6;
+  color: var(--muted);
+}
+
+/* --- Review queue --- */
+.review-queue {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.review-img img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  display: block;
+}
+
+.review-meta .q-prompt {
+  display: block;
+  margin: 0 0 0.4rem;
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #2a0606;
+}
+
+@media (max-width: 600px) {
+  .review-item {
+    grid-template-columns: 1fr;
+  }
+  .review-img img {
+    max-width: 100%;
+  }
 }
 
 .sr-only {

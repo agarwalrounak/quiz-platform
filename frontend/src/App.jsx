@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import NavBar from "./components/NavBar.jsx";
+import RouteManager from "./components/RouteManager.jsx";
 import LoginPage from "./auth/LoginPage.jsx";
 import RegisterPage from "./auth/RegisterPage.jsx";
 import { RequireAdmin, RequireAuth } from "./auth/guards.jsx";
@@ -9,11 +10,17 @@ import ResultsPage from "./results/ResultsPage.jsx";
 import HistoryPage from "./results/HistoryPage.jsx";
 import QuestionList from "./admin/QuestionList.jsx";
 import QuestionEditor from "./admin/QuestionEditor.jsx";
+import ReviewQueue from "./admin/ReviewQueue.jsx";
 
 export default function App() {
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
+      <RouteManager />
       <NavBar />
+      <div id="main-content" tabIndex={-1}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -74,9 +81,18 @@ export default function App() {
             </RequireAdmin>
           }
         />
+        <Route
+          path="/admin/review"
+          element={
+            <RequireAdmin>
+              <ReviewQueue />
+            </RequireAdmin>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </div>
     </>
   );
 }
